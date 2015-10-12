@@ -544,7 +544,7 @@ public class WurmMapUploader {
 		} else if (height < 3000) {
 			returnVal = (short) (height*0.9 + 80); //highlands have variable dirt layer, from 20 dirt at 1000 to 220 dirt at 3000.  
 		} else {
-			returnVal = (short) (height + 20); // peaks over 3000 height have thin dirt leyer 
+			returnVal = (short) (height - 20); // peaks over 3000 height have thin dirt layer 
 		}
 		return returnVal;
 	}
