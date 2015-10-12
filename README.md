@@ -7,7 +7,9 @@ Requires WurmModServerApi (https://github.com/codeclubab/WurmModServerApi)
 
 1. Copy WurmMapUploader.java file to WurmModServerApi source folder where WurmAPI.java is stored.
 
-2. Compile with javac or run in IDE.
+2. Optional: change settings in the WurmMapUploader.java source file (ELEVATION_SCALE, ELEVATION_SHIFT, IMPORT_CAVE_IMAGE, TWEAK_HEIGHT, REMOVE_EXCESSIVE_TREES). See below.
+
+3. Compile with javac or run in IDE.
 
 #Input files
 
@@ -38,6 +40,23 @@ Generate dump images for Wurm Unlimited map data. EXISTING DUMP FILES WILL BE OV
 java WurmMapUploader help
 
 Displays help message
+
+#Settings in source code
+
+ELEVATION_SCALE: scales down height map if it has too tall mountains. You may need to change it, depending on output of your terrain generator.
+
+ELEVATION_SHIFT: shifts up or down the whole terrain, if it is placed too deep under water or too high. You may need to change it, depending on output of your terrain generator.
+
+IMPORT_CAVE_IMAGE: set to false if you have no cave map image and need to generate it. 
+Use this option to get a cave map with dense and uniform distribution of ore veins under land tiles.
+
+Note: even if you set it false, you still must provide any color PNG file of proper size as a cave map. 
+
+TWEAK_HEIGHT: if set to true, maximum water depth is set to -25 for marsh and -100 for other terrain. Underwater clay tiles will be elevated to +1 height.
+
+REMOVE_EXCESSIVE_TREES: if set to true, some trees will be eliminated from the terrain map and changed to grass. This option is useful if you fill some areas with solid color of a tree type and want to make trees a little more  scattered. Set % of remaining trees in treesDensity variable.
+
+TWEAK_TERRAIN: some tweaks that were used for initial creation of Treasure Island terrain (see test image files). In 99% of cases, this option should not be set true.
 
 #Ages of trees and bushes
 
