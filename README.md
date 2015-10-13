@@ -156,9 +156,9 @@ Some terrain types are not supported in the current version of the uploader (for
 
 #Colors for cave map
 
-Some cave types are not supported in the current version of the uploader (for example, reinforced walls)
+WurmModServerApi only allows solid cave walls, so some cave tiles cannot be imported (for example, reinforced floors)
 
-|Terrain type|Name|Red|Green|Blue|
+|Tile type|Name|Red|Green|Blue|
 |---|---|---|---|---|
 |TILE_CAVE_WALL|Cave wall|127|127|127|
 |TILE_CAVE_WALL_LAVA|Lava wall|215|51|30|
@@ -173,4 +173,14 @@ Some cave types are not supported in the current version of the uploader (for ex
 |TILE_CAVE_WALL_ORE_TIN|Tin vein|41|58|12|
 |TILE_CAVE_WALL_ORE_ZINC|Zinc vein|104|125|134|
 |TILE_CAVE_WALL_SLATE|Slate wall|30|30|30|
+|TILE_CAVE_WALL_REINFORCED|Reinforced cave wall|64|64|64|
 
+#Colors that appear in cave dump image but can not be used in cave map image
+
+|Tile type|Name|Red|Green|Blue|
+|---|---|---|---|---|
+|TILE_CAVE|Cave|255|255|255|
+|TILE_CAVE_EXIT|Cave|0|0|0|
+|TILE_CAVE_FLOOR_REINFORCED|Reinforced cave|185|185|185|
+||Non-cave tile|255|127|137|
+||Unknown type of cave tile|255|0|0|

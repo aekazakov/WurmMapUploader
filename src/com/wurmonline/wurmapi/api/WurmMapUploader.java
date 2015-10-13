@@ -67,8 +67,8 @@ public class WurmMapUploader {
 	public static final int BIRCH_COLOR = -14075290;
 	public static final int APPLE_COLOR = -14075300;
 
-	// colors used in cave map	
-	public static final int CAVE_COLOR = -8421505;
+	// colors used in cave map and cave dump	
+	public static final int CAVE_WALL_COLOR = -8421505;
 	public static final int CAVE_LAVA_COLOR = -2673890;
 	public static final int CAVE_MARBLE_COLOR = -1118482;
 	public static final int CAVE_ADAMANTINE_COLOR = -14075270;
@@ -81,7 +81,16 @@ public class WurmMapUploader {
 	public static final int CAVE_TIN_COLOR = -14075380;
 	public static final int CAVE_ZINC_COLOR = -9929338;
 	public static final int CAVE_SLATE_COLOR = -14803426;
+	public static final int CAVE_WALL_REINFORCED_COLOR = -12566464;
 
+	// colors used in cave dump only	
+	public static final int CAVE_FLOOR_REINFORCED_COLOR = -4605511;
+	public static final int CAVE_EXIT_COLOR = -16777216;
+	public static final int CAVE_COLOR = -1;
+	public static final int NOT_CAVE_TILE_COLOR = -32887;
+	public static final int UNKNOWN_CAVE_TILE_COLOR = -65536;
+
+	//counters
 	public static int treeCount = 0;
 	public static int bushCount = 0;
 	public static int exposedRockCount = 0;
@@ -290,7 +299,7 @@ public class WurmMapUploader {
 	private static Color encodeCaveTile(Tile tile) {
 		Color color = new Color (-1);
 		if (tile == Tile.TILE_CAVE_WALL) {
-			color = new Color(CAVE_COLOR);
+			color = new Color(CAVE_WALL_COLOR);
 		} else if (tile == Tile.TILE_CAVE_WALL_ORE_ADAMANTINE) {
 			color = new Color(CAVE_ADAMANTINE_COLOR);
 		} else if (tile == Tile.TILE_CAVE_WALL_ORE_COPPER) {
@@ -315,9 +324,20 @@ public class WurmMapUploader {
 			color = new Color(CAVE_TIN_COLOR);
 		} else if (tile == Tile.TILE_CAVE_WALL_ORE_ZINC) {
 			color = new Color(CAVE_ZINC_COLOR);
+		} else if (tile == Tile.TILE_CAVE_WALL_REINFORCED) {
+			color = new Color(CAVE_WALL_REINFORCED_COLOR);
+		} else if (tile == Tile.TILE_CAVE_FLOOR_REINFORCED) {
+			color = new Color(CAVE_FLOOR_REINFORCED_COLOR);
+		} else if (tile == Tile.TILE_CAVE) {
+			color = new Color(CAVE_COLOR);
+		} else if (tile == Tile.TILE_CAVE_EXIT) {
+			color = Tile.TILE_CAVE_EXIT.getColor();
+		} else if (!tile.isCave()) {
+			System.err.println(tile.tilename + " is not a cave tile. This tile will have pink color on cave dump image.");
+			color = new Color(NOT_CAVE_TILE_COLOR);			
 		} else {
-			System.err.println("Cave tile type not supported: " + tile.tilename + ". This tile will have white color on cave dump image.");
-			color = new Color(255, 255, 255);
+			System.err.println("Unknown type of cave tile: " + tile.tilename + ". This tile will have red color on cave dump image.");
+			color = new Color(UNKNOWN_CAVE_TILE_COLOR);
 		}
 		return color;
 	}
@@ -357,7 +377,7 @@ public class WurmMapUploader {
 	private static Tile decodeCaveColor(Color color) {
 		if (color.getRGB() == CAVE_ADAMANTINE_COLOR) {
 			return Tile.TILE_CAVE_WALL_ORE_ADAMANTINE;
-		} else if (color.getRGB() == CAVE_COLOR) {
+		} else if (color.getRGB() == CAVE_WALL_COLOR) {
 			return Tile.TILE_CAVE_WALL;
 		} else if (color.getRGB() == CAVE_COPPER_COLOR) {
 			return Tile.TILE_CAVE_WALL_ORE_COPPER;
@@ -381,6 +401,8 @@ public class WurmMapUploader {
 			return Tile.TILE_CAVE_WALL_ORE_TIN;
 		} else if (color.getRGB() == CAVE_ZINC_COLOR){
 			return Tile.TILE_CAVE_WALL_ORE_ZINC;
+		} else if (color.getRGB() == CAVE_WALL_REINFORCED_COLOR){
+			return Tile.TILE_CAVE_WALL_REINFORCED;
 		} else {
 			System.err.println("Unknown RGB color for cave wall: Red = " + color.getRed() + " Green = " + color.getGreen() + " Blue = " + color.getBlue());
 			System.exit(1);
