@@ -1,8 +1,15 @@
 package com.wurmonline.wurmapi.api;
 
 import java.awt.Color;
+import java.awt.Transparency;
+import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferUShort;
 import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
@@ -17,15 +24,21 @@ import com.wurmonline.mesh.TreeData.TreeType;
 
 public class WurmMapUploader {
 	
-	// constants to adjust heightmap 
-	private static final int ELEVATION_SCALE = 6;
-	private static final int ELEVATION_SHIFT = 18500;
+	//  use images for data upload or not. Should be true unless you have no these maps and no idea how to make them 
+	private static final boolean IMPORT_CAVE_IMAGE = true; //set false to generate cave tiles with lots of veins, uniformly distributed 
+	private static final boolean IMPORT_ROCK_IMAGE = true; //set false to calculate rock layer heights as described in README instead of importing rock height map 
 
-	//  some options
-	private static final boolean IMPORT_CAVE_IMAGE = true; //set true to generate cave tiles with lots of veins, uniformly distributed 
+	// constants to adjust height map and rock height map
+	//no need to change them if terrain surface not too tall and not submerged in water 
+	private static final int ELEVATION_SCALE = 1; //scale of elevation. If changed to 10, all elevation values will be 10 times lower 
+	private static final int ELEVATION_SHIFT = 0; //moves terrain up and down by a specified amount of dirt 
+	private static final int ROCK_HEIGHT_SCALE = 1;//the same as for height map, but for rock layer
+	private static final int ROCK_HEIGHT_SHIFT = 0;//the same as for height map, but for rock layer
+
+	// tweaks that should be false 
 	private static final boolean TWEAK_TERRAIN = false;// these tweaks were used for initial generation of Treasure Island map and would be useless for 99% of maps. 
-	private static final boolean TWEAK_HEIGHT = true;// these tweaks eliminate very deep water, deep marsh and rise underwater clay tiles.  
-	private static final boolean REMOVE_EXCESSIVE_TREES = true;// set true to randomly eliminate excessive trees (if terrain map has solid areas of forest)  
+	private static final boolean TWEAK_HEIGHT = false;// these tweaks eliminate very deep water, deep marsh and rise underwater clay tiles.  
+	private static final boolean REMOVE_EXCESSIVE_TREES = false;// set true to randomly eliminate excessive trees (if terrain map has solid areas of forest)  
 	private static int treesDensity = 40; //% of tree tiles that would remain on map
 
 // colors used in terrain map
@@ -106,17 +119,22 @@ public class WurmMapUploader {
 			dumpMapData(mapData);
 		    mapData.close();
 			System.out.println("Done!!!");
-		} else if ((args.length == 5)&&(args[0].equals("preview"))) {
+		} else if ((args.length == 6)&&(args[0].equals("preview"))) {
 			MapData mapData =  openMap(args[1]);
-			mapData = importMap (mapData, args[2], args[3], args[4]);
+			mapData = importMap (mapData, args[2], args[3], args[4], args[5]);
 			dumpMapData(mapData);
 		    mapData.close();
 			System.out.println("Done!!!");
-		} else if ((args.length == 5)&&(args[0].equals("load"))) {
+		} else if ((args.length == 6)&&(args[0].equals("load"))) {
 			MapData mapData =  openMap(args[1]);
-			mapData = importMap (mapData, args[2], args[3], args[4]);
+			mapData = importMap (mapData, args[2], args[3], args[4], args[5]);
 			dumpMapData(mapData);
 		    mapData.saveChanges();
+		    mapData.close();
+			System.out.println("Done!!!");
+		} else if ((args.length == 2)&&(args[0].equals("export"))) {
+			MapData mapData =  openMap(args[1]);
+			exportMaps(mapData);
 		    mapData.close();
 			System.out.println("Done!!!");
 		} else if ((args.length == 1)&&(args[0].equals("help"))) {
@@ -130,7 +148,7 @@ public class WurmMapUploader {
 		
 	}
 	
-	private static void dumpMapData(MapData mapData) throws IOException {
+	public static void dumpMapData(MapData mapData) throws IOException {
 	    BufferedImage dumpImage = mapData.createMapDump();
 	    File outputfile = new File("dump_image.png");
 	    ImageIO.write(dumpImage, "png", outputfile);
@@ -151,7 +169,20 @@ public class WurmMapUploader {
 	    outputfile = new File("cave_dump_image.png");
 	    ImageIO.write(dumpImage, "png", outputfile);
 
+	    dumpImage = createRockTopographicDump(mapData, false, (short)100);
+	    outputfile = new File("rock_dump_image.png");
+	    ImageIO.write(dumpImage, "png", outputfile);
 	}
+	
+	public static void exportMaps(MapData mapData) throws IOException {
+		BufferedImage mapImage = exportRockMap(mapData);
+	    File outputfile = new File("exported_rock_map.png");
+	    ImageIO.write(mapImage, "png", outputfile);
+
+		mapImage = exportHeightMap(mapData);
+	    outputfile = new File("exported_height_map.png");
+	    ImageIO.write(mapImage, "png", outputfile);
+}
 
 	private static void displayInfo() {
 		System.out.println("Wurm Unlimited map uploader");
@@ -160,16 +191,19 @@ public class WurmMapUploader {
 		System.out.println("Create a blank 2048x2048 tiles map in the folder <map folder>.");
 		System.out.println("java WurmMapUploader create <map folder>");
 		System.out.println();
-		System.out.println("Create dump images for height map, terrain map and cave map images without uploading them. NOTE: these dumps for image files, NOT for WU map data in <map folder>. EXISTING DUMP FILES WILL BE OVERWRITTEN. This function will exit with error if images cannot be uploaded.");
-		System.out.println("java WurmMapUploader preview <WU map folder> <height map image> <terrain map image> <cave map image>");
+		System.out.println("Create dump images for height map, terrain map, cave map and rock height map images without uploading them. NOTE: these dumps for image files, NOT for WU map data in <map folder>. EXISTING DUMP FILES WILL BE OVERWRITTEN. This function will exit with error if images cannot be uploaded.");
+		System.out.println("java WurmMapUploader preview <WU map folder> <height map image> <terrain map image> <cave map image> <rock map image>");
 		System.out.println();
-		System.out.println("Upload height, terrain and cave maps AND create dump images. EXISTING MAP AND DUMP FILES WILL BE OVERWRITTEN. This function will exit with error if images cannot be uploaded.");
-		System.out.println("java WurmMapUploader load <WU map folder> <height map image> <terrain map image> <cave map image>");
+		System.out.println("Upload height, terrain, cave , rock height maps AND create dump images. EXISTING MAP AND DUMP FILES WILL BE OVERWRITTEN. This function will exit with error if images cannot be uploaded.");
+		System.out.println("java WurmMapUploader load <WU map folder> <height map image> <terrain map image> <cave map image> <rock map image>");
 		System.out.println();
 		System.out.println("Generate dump images for Wurm Unlimited map data. EXISTING DUMP FILES WILL BE OVERWRITTEN.");
 		System.out.println("java WurmMapUploader dump <WU map folder>");
 		System.out.println();
-		System.out.println("Important note: height map file must be 16-bit greatscale PNG, terrain map and cave map files must be 24 or 32 bit color PNG");
+		System.out.println("Export surface height map and rock layer height map as 16 bit grayscale PNG");
+		System.out.println("java WurmMapUploader export <WU map folder>");
+		System.out.println();
+		System.out.println("Important note: height map and rock height map files must be 16-bit greatscale PNG, terrain map and cave map files must be 24 or 32 bit color PNG");
 		System.out.println("only 2048x2048 maps can be loaded in the current version");
 		System.out.println("see terrain and cave colors in README file");
 		
@@ -190,13 +224,15 @@ public class WurmMapUploader {
 		return data;
 	}
 
-	private static MapData importMap(MapData mapData, String heightMapFileName, String terrainMapFileName, String caveMapFileName) throws IOException {
+	private static MapData importMap(MapData mapData, String heightMapFileName, String terrainMapFileName, String caveMapFileName, String rockMapFileName) throws IOException {
 		BufferedImage image = ImageIO.read(new File(heightMapFileName));
 		BufferedImage terrainImage = ImageIO.read(new File(terrainMapFileName));
 		BufferedImage caveImage = ImageIO.read(new File(caveMapFileName));
-		
+		BufferedImage rockImage = ImageIO.read(new File(rockMapFileName));
+			
 //		System.out.println(image.getColorModel().toString());
 		
+				
 		int imageHeight = image.getHeight();
 		if (imageHeight != 2048) {
 			System.err.println("Image height not equal to 2048");
@@ -216,11 +252,18 @@ public class WurmMapUploader {
 		int caveImageHeight = caveImage.getHeight();
 		int caveImageWidth = caveImage.getWidth();
 		if ((caveImageHeight != imageHeight)||(caveImageWidth != imageWidth)){
+			System.err.println("Height map and cave map must have the same size");
+			System.exit(1);
+		}
+		int rockImageHeight = rockImage.getHeight();
+		int rockImageWidth = rockImage.getWidth();
+		if ((rockImageHeight != imageHeight)||(rockImageWidth != imageWidth)){
 			System.err.println("Height map and rock map must have the same size");
 			System.exit(1);
 		}
 			
 		Raster raster = image.getRaster();
+		Raster rockRaster = rockImage.getRaster();
 		
 	    for (int x = 0; x < imageWidth; x++)
 	    {
@@ -228,7 +271,8 @@ public class WurmMapUploader {
 	        {
 	        	int[] pixelColor = new int[2];
 	        	Color color = new Color(terrainImage.getRGB(x,y));
-	        	Tile tileType = decodeColor (color); 
+	        	Tile tileType = decodeColor (color);
+	        	if (tileType == Tile.TILE_ROCK) exposedRockCount++;
 	        	raster.getPixel(x, y, pixelColor);
 	        	short height = (short) ((pixelColor[0] - Short.MAX_VALUE + ELEVATION_SHIFT)/ELEVATION_SCALE);
 	        	if (height > 0) landTilesCount++;
@@ -267,8 +311,16 @@ public class WurmMapUploader {
 	        		mapData.setSurfaceTile(x, y, tileType, height);
 	        	}
 	        	
-	        	short rockHeight = calculateRockHeight (color, height);
+	        	short rockHeight = 0;
+	        	if (IMPORT_ROCK_IMAGE) {
+		        	int[] rockPixelColor = new int[2];
+		        	rockRaster.getPixel(x, y, rockPixelColor);
+		        	rockHeight = (short) ((rockPixelColor[0] - Short.MAX_VALUE + ROCK_HEIGHT_SHIFT)/ROCK_HEIGHT_SCALE);
+	        	} else {
+	        		rockHeight = calculateRockHeight (color, height);
+	        	}
         		mapData.setRockHeight(x, y, rockHeight);
+
         		Tile caveTile; 
 	        	if (IMPORT_CAVE_IMAGE) {
 	        		Color caveColor = new Color(caveImage.getRGB(x, y));
@@ -551,7 +603,6 @@ public class WurmMapUploader {
 	private static short calculateRockHeight(Color color, short height) {
 		short returnVal = Short.MIN_VALUE;
 		if (color.getRGB() == ROCK_COLOR){
-			exposedRockCount++;
 			returnVal = height; //expose rock layer
 		} else if (color.getRGB() == CLIFF_COLOR) {
 			returnVal = (short) (height-1); //cliffs have rock right under surface
@@ -571,7 +622,7 @@ public class WurmMapUploader {
 		return returnVal;
 	}
 
-	private static BufferedImage createCaveDump(MapData mapData) {
+	public static BufferedImage createCaveDump(MapData mapData) {
         int lWidth = 16384;
         if (lWidth > mapData.getWidth())
             lWidth = mapData.getWidth();
@@ -616,7 +667,168 @@ public class WurmMapUploader {
         return bi2;
 	}
 
-	private static short tweakHeight(int x, int y, Color color, short height) {
+    public static BufferedImage createRockTopographicDump(MapData mapData, boolean showWater, short interval) {
+        int lWidth = 16384;
+        if (lWidth > mapData.getWidth())
+            lWidth = mapData.getWidth();
+        int yo = mapData.getWidth() - lWidth;
+        if (yo < 0)
+            yo = 0;
+        int xo = mapData.getWidth() - lWidth;
+        if (xo < 0)
+            xo = 0;
+
+        final Random random = new Random();
+        if (xo > 0)
+            xo = random.nextInt(xo);
+        if (yo > 0)
+            yo = random.nextInt(yo);
+
+        final BufferedImage bi2 = new BufferedImage(lWidth, lWidth, BufferedImage.TYPE_INT_RGB);
+        final float[] data = new float[lWidth * lWidth * 3];
+        
+        for (int x = 0; x < lWidth; x++) {
+            for (int y = lWidth - 1; y >= 0; y--) {
+                final short height = mapData.getRockHeight(x + xo, y + yo);
+                final short nearHeightNX = x == 0 ? height : mapData.getRockHeight(x + xo - 1, y + yo); 
+                final short nearHeightNY = y == 0 ? height : mapData.getRockHeight(x + xo, y + yo - 1);
+                final short nearHeightX = x == lWidth - 1 ? height : mapData.getRockHeight(x + xo + 1, y + yo); 
+                final short nearHeightY = y == lWidth - 1 ? height : mapData.getRockHeight(x + xo, y + yo + 1); 
+                boolean isControur = checkContourLine(height, nearHeightNX, interval) || checkContourLine(height, nearHeightNY, interval) || checkContourLine(height, nearHeightX, interval) || checkContourLine(height, nearHeightY, interval);
+                
+                final Color color = new Color(ROCK_COLOR);
+                int r = color.getRed();
+                int g = color.getGreen();
+                int b = color.getBlue();
+                if (isControur) {
+                    r = 0;
+                    g = 0;
+                    b = 0;
+                }
+                else if (height < 0 && showWater) {
+                    r = (int) (r * 0.2f + 0.4f * 0.4f * 256f);
+                    g = (int) (g * 0.2f + 0.5f * 0.4f * 256f);
+                    b = (int) (b * 0.2f + 1.0f * 0.4f * 256f);
+                }
+                
+                data[(x + y * lWidth) * 3 + 0] = r;
+                data[(x + y * lWidth) * 3 + 1] = g;
+                data[(x + y * lWidth) * 3 + 2] = b;
+            }
+        }
+
+        bi2.getRaster().setPixels(0, 0, lWidth, lWidth, data);
+        return bi2;
+    }
+
+    private static boolean checkContourLine(short h0, short h1, short interval) {
+        if (h0 == h1) {
+            return false;
+        }
+        for (int i = h0; i<=h1; i++) {
+            if (i % interval == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    
+    public static BufferedImage exportRockMap(MapData mapData) {
+    	
+        int lWidth = 16384;
+        if (lWidth > mapData.getWidth())
+            lWidth = mapData.getWidth();
+        int yo = mapData.getWidth() - lWidth;
+        if (yo < 0)
+            yo = 0;
+        int xo = mapData.getWidth() - lWidth;
+        if (xo < 0)
+            xo = 0;
+
+        final Random random = new Random();
+        if (xo > 0)
+            xo = random.nextInt(xo);
+        if (yo > 0)
+            yo = random.nextInt(yo);
+
+
+        final short[] pixels = new short[lWidth * lWidth];
+        
+        for (int x = 0; x < lWidth; x++) {
+            for (int y = lWidth - 1; y >= 0; y--) {
+                short rockHeight = mapData.getRockHeight(x + xo, y + yo);
+                pixels[x + y * lWidth] = (short) (rockHeight - Short.MAX_VALUE);
+            }
+        }
+        
+        ColorModel colorModel = new ComponentColorModel(
+                ColorSpace.getInstance(ColorSpace.CS_GRAY),
+                new int[]{16},
+                false,
+                false,
+                Transparency.OPAQUE,
+                DataBuffer.TYPE_USHORT);
+        DataBufferUShort db = new DataBufferUShort(pixels, pixels.length);
+        WritableRaster raster = Raster.createInterleavedRaster(
+                db,
+                mapData.getWidth(),
+                mapData.getHeight(),
+                mapData.getWidth(),
+                1,
+                new int[1],
+                null);
+        return new BufferedImage(colorModel, raster, false, null);
+    }
+
+    public static BufferedImage exportHeightMap(MapData mapData) {
+    	
+        int lWidth = 16384;
+        if (lWidth > mapData.getWidth())
+            lWidth = mapData.getWidth();
+        int yo = mapData.getWidth() - lWidth;
+        if (yo < 0)
+            yo = 0;
+        int xo = mapData.getWidth() - lWidth;
+        if (xo < 0)
+            xo = 0;
+
+        final Random random = new Random();
+        if (xo > 0)
+            xo = random.nextInt(xo);
+        if (yo > 0)
+            yo = random.nextInt(yo);
+
+
+        final short[] pixels = new short[lWidth * lWidth];
+        
+        for (int x = 0; x < lWidth; x++) {
+            for (int y = lWidth - 1; y >= 0; y--) {
+                short height = mapData.getSurfaceHeight(x + xo, y + yo);
+                pixels[x + y * lWidth] = (short) (height - Short.MAX_VALUE);
+            }
+        }
+        
+        ColorModel colorModel = new ComponentColorModel(
+                ColorSpace.getInstance(ColorSpace.CS_GRAY),
+                new int[]{16},
+                false,
+                false,
+                Transparency.OPAQUE,
+                DataBuffer.TYPE_USHORT);
+        DataBufferUShort db = new DataBufferUShort(pixels, pixels.length);
+        WritableRaster raster = Raster.createInterleavedRaster(
+                db,
+                mapData.getWidth(),
+                mapData.getHeight(),
+                mapData.getWidth(),
+                1,
+                new int[1],
+                null);
+        return new BufferedImage(colorModel, raster, false, null);
+    }
+
+    private static short tweakHeight(int x, int y, Color color, short height) {
 		if (height < -100) {
 			height = (short)(height/10 -100); //no need to have very deep water
 		}

@@ -13,7 +13,7 @@ Requires WurmModServerApi (https://github.com/codeclubab/WurmModServerApi)
 
 #Input files
 
-Heightmap must be in 16 bit greyscale PNG format.
+Surface and rock layer height maps must be in 16 bit greyscale PNG format.
 
 Terrain and cave maps must be in 24 or 32 bit color PNG format.
 
@@ -25,17 +25,21 @@ java WurmMapUploader create [map folder]
 
 Creates blank 2048x2084 Wurm Unlimited map in the folder specified. Other map sizes are not supported in the current version.
 
-java WurmMapUploader preview [WU map folder] [height map image] [terrain map image] [cave map image]
+java WurmMapUploader preview [WU map folder] [height map image] [terrain map image] [cave map image] [rock height map image]
 
-Creates dump images for height map, terrain map and cave map images without uploading them. NOTE: these dumps for image files, NOT for map data in WU map folder. EXISTING DUMP FILES WILL BE OVERWRITTEN. This function will exit with error if images cannot be uploaded.
+Creates dump images for height map, terrain map, cave map and rock height map images without uploading them. NOTE: these dumps for image files, NOT for map data in WU map folder. EXISTING DUMP FILES WILL BE OVERWRITTEN. This function will exit with error if images cannot be uploaded.
 
-java WurmMapUploader load [WU map folder] [height map image] [terrain map image] [cave map image]
+java WurmMapUploader load [WU map folder] [height map image] [terrain map image] [cave map image] [rock height map image]
 
-Uploads height, terrain and cave maps AND creates dump images. EXISTING MAP DATA IS NOT PRESERVED AND DUMP FILES WILL BE OVERWRITTEN. This function will exit with error if images cannot be uploaded.
+Uploads height, terrain, cave and rock height maps AND creates dump images. EXISTING MAP DATA IS NOT PRESERVED AND DUMP FILES WILL BE OVERWRITTEN. This function will exit with error if images cannot be uploaded.
 
 java WurmMapUploader dump [WU map folder]
 
-Generate dump images for Wurm Unlimited map data. EXISTING DUMP FILES WILL BE OVERWRITTEN.
+Generates dump images for Wurm Unlimited map data. EXISTING DUMP FILES WILL BE OVERWRITTEN.
+        
+java WurmMapUploader export [WU map folder]
+
+Generates height maps surface and rock layer as 16 bit grayscale PNG files. 
 
 java WurmMapUploader help
 
@@ -43,12 +47,17 @@ Displays help message
 
 #Settings in source code
 
+IMPORT_CAVE_IMAGE: set to false if you have no cave map image and need to generate it. 
+Set this variable to false to get a cave map with dense and uniform distribution of ore veins under land tiles.
+
+IMPORT_ROCK_IMAGE: set to false if you have no rock height map image. 
+Set this variable to false to generate rock layer as described below. 
+
+
 ELEVATION_SCALE: scales down height map if it has too tall mountains. You may need to change it, depending on output of your terrain generator.
 
 ELEVATION_SHIFT: shifts up or down the whole terrain, if it is placed too deep under water or too high. You may need to change it, depending on output of your terrain generator.
 
-IMPORT_CAVE_IMAGE: set to false if you have no cave map image and need to generate it. 
-Use this option to get a cave map with dense and uniform distribution of ore veins under land tiles.
 
 Note: even if you set it false, you still must provide any color PNG file of proper size as a cave map. 
 
