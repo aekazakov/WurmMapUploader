@@ -18,32 +18,37 @@ import javax.imageio.ImageIO;
 
 import com.wurmonline.mesh.BushData.BushType;
 import com.wurmonline.mesh.FoliageAge;
-import com.wurmonline.mesh.GrassData;
+//import com.wurmonline.mesh.GrassData;
+import com.wurmonline.mesh.GrassData.FlowerType;
+//import com.wurmonline.mesh.GrassData.GrassType;
+import com.wurmonline.mesh.GrassData.GrowthStage;
+import com.wurmonline.mesh.GrassData.GrowthTreeStage;
+//import com.wurmonline.mesh.MeshIO;
+//import com.wurmonline.mesh.Tiles;
 import com.wurmonline.mesh.Tiles.Tile;
 import com.wurmonline.mesh.TreeData.TreeType;
 
+
 public class WurmMapUploader {
 	
-	//  use images for data upload or not. Should be true unless you have no these maps and no idea how to make them 
-	private static final boolean IMPORT_CAVE_IMAGE = true; //set false to generate cave tiles with lots of veins, uniformly distributed 
-	private static final boolean IMPORT_ROCK_IMAGE = true; //set false to calculate rock layer heights as described in README instead of importing rock height map 
+	
+	private static final boolean RANDOMIZE_TREE_AGE = true; //if false, all trees will have age YOUNG_THREE  
+	private static final boolean RANDOMIZE_BUSH_AGE = true; //if false, all bushes will have age YOUNG_THREE
+	private static final boolean RANDOMIZE_GRASS_GROWTH_STAGE = true; //if false, all grass tile will have growth stage MEDIUM
+	private static int flowersDensity = 10; // % of grass tiles with flowers
 
 	// constants to adjust height map and rock height map
-	//no need to change them if terrain surface not too tall and not submerged in water 
-	private static final int ELEVATION_SCALE = 1; //scale of elevation. If changed to 10, all elevation values will be 10 times lower 
-	private static final int ELEVATION_SHIFT = 0; //moves terrain up and down by a specified amount of dirt 
-	private static final int ROCK_HEIGHT_SCALE = 1;//the same as for height map, but for rock layer
-	private static final int ROCK_HEIGHT_SHIFT = 0;//the same as for height map, but for rock layer
-
-	// tweaks that should be false 
-	private static final boolean TWEAK_TERRAIN = false;// these tweaks were used for initial generation of Treasure Island map and would be useless for 99% of maps. 
-	private static final boolean TWEAK_HEIGHT = false;// these tweaks eliminate very deep water, deep marsh and rise underwater clay tiles.  
-	private static final boolean REMOVE_EXCESSIVE_TREES = false;// set true to randomly eliminate excessive trees (if terrain map has solid areas of forest)  
-	private static int treesDensity = 40; //% of tree tiles that would remain on map
+	//ELEVATION_SHIFT shifts every tile up by the specified number of units
+	//ELEVATION_SCALE scales down elevations (and depths) from sea level. For example ELEVATION_SCALE=2 will make the whole island two times lower
+	//ROCK_HEIGHT_SHIFT and ROCK_HEIGHT_SCALE affect the rock layer in the same way
+	private static final int ELEVATION_SCALE = 1; 
+	private static final int ELEVATION_SHIFT = 0; 
+	private static final int ROCK_HEIGHT_SCALE = 1;
+	private static final int ROCK_HEIGHT_SHIFT = 0;
 
 // colors used in terrain map
-	public static final int LAVA_COLOR = -2673890;
 	public static final int SAND_COLOR = -6253715;
+	public static final int LAVA_COLOR = -2673890;
 	public static final int CLIFF_COLOR = -6580332;
 	public static final int TUNDRA_COLOR = -9009299;
 	public static final int STEPPE_COLOR = -9276093;
@@ -59,26 +64,26 @@ public class WurmMapUploader {
 	public static final int MARSH_COLOR = -13933240;
 	public static final int TAR_COLOR = -15592152;
 	public static final int SNOW_COLOR = -1;
-	public static final int THORN_COLOR = -14075330;
-	public static final int ROSE_COLOR = -14075340;
-	public static final int OLEANDER_COLOR = -14075350;
-	public static final int LAVENDER_COLOR = -14075360;
-	public static final int GRAPE_COLOR = -14075370;
-	public static final int CAMELLIA_COLOR = -14075380;
-	public static final int WILLOW_COLOR = -14075170;
-	public static final int WALNUT_COLOR = -14075180;
-	public static final int PINE_COLOR = -14075190;
-	public static final int OLIVE_COLOR = -14075200;
-	public static final int OAK_COLOR = -14075210;
-	public static final int MAPLE_COLOR = -14075220;
-	public static final int LINDEN_COLOR = -14075230;
-	public static final int LEMON_COLOR = -14075240;
-	public static final int FIR_COLOR = -14075250;
-	public static final int CHESTNUT_COLOR = -14075260;
-	public static final int CHERRY_COLOR = -14075270;
-	public static final int CEDAR_COLOR = -14075280;
-	public static final int BIRCH_COLOR = -14075290;
-	public static final int APPLE_COLOR = -14075300;
+	public static final int THORN_COLOR = -7851476;
+	public static final int ROSE_COLOR = -54478;
+	public static final int OLEANDER_COLOR = -408082;
+	public static final int LAVENDER_COLOR = -2735361;
+	public static final int GRAPE_COLOR = -6734181;
+	public static final int CAMELLIA_COLOR = -394849;
+	public static final int WILLOW_COLOR = -8797844;
+	public static final int WALNUT_COLOR = -8332527;
+	public static final int PINE_COLOR = -4568296;
+	public static final int OLIVE_COLOR = -7298962;
+	public static final int OAK_COLOR = -8665599;
+	public static final int MAPLE_COLOR = -4768768;
+	public static final int LINDEN_COLOR = -5521063;
+	public static final int LEMON_COLOR = -5794;
+	public static final int FIR_COLOR = -10826094;
+	public static final int CHESTNUT_COLOR = -16723102;
+	public static final int CHERRY_COLOR = -1957376;
+	public static final int CEDAR_COLOR = -11608786;
+	public static final int BIRCH_COLOR = -531136;
+	public static final int APPLE_COLOR = -16896;
 
 	// colors used in cave map and cave dump	
 	public static final int CAVE_WALL_COLOR = -8421505;
@@ -103,11 +108,19 @@ public class WurmMapUploader {
 	public static final int NOT_CAVE_TILE_COLOR = -32887;
 	public static final int UNKNOWN_CAVE_TILE_COLOR = -65536;
 
+	private final MapData mapData;
+	private final Random rand = new Random();
+
 	//counters
 	public static int treeCount = 0;
 	public static int bushCount = 0;
 	public static int exposedRockCount = 0;
 	public static int landTilesCount = 0;
+
+	WurmMapUploader (String dir) throws IOException {
+		WurmAPI api = WurmAPI.open(dir);
+		this.mapData = api.getMapData();
+	}
 
 	public static void main(String[] args) throws IOException {
 		
@@ -115,27 +128,27 @@ public class WurmMapUploader {
 			createBlankMap(args[1]);
 			System.out.println("Done!!!");
 		} else if ((args.length == 2)&&(args[0].equals("dump"))) {
-			MapData mapData =  openMap(args[1]);
-			dumpMapData(mapData);
-		    mapData.close();
+			WurmMapUploader uploader = new WurmMapUploader(args[1]);
+			uploader.dumpMapData();
+			uploader.close();
 			System.out.println("Done!!!");
 		} else if ((args.length == 6)&&(args[0].equals("preview"))) {
-			MapData mapData =  openMap(args[1]);
-			mapData = importMap (mapData, args[2], args[3], args[4], args[5]);
-			dumpMapData(mapData);
-		    mapData.close();
+			WurmMapUploader uploader = new WurmMapUploader(args[1]);
+			uploader.importMap (args[2], args[3], args[4], args[5]);
+			uploader.dumpMapData();
+			uploader.close();
 			System.out.println("Done!!!");
 		} else if ((args.length == 6)&&(args[0].equals("load"))) {
-			MapData mapData =  openMap(args[1]);
-			mapData = importMap (mapData, args[2], args[3], args[4], args[5]);
-			dumpMapData(mapData);
-		    mapData.saveChanges();
-		    mapData.close();
+			WurmMapUploader uploader = new WurmMapUploader(args[1]);
+			uploader.importMap (args[2], args[3], args[4], args[5]);
+			uploader.dumpMapData();
+		    uploader.saveChanges();
+			uploader.close();
 			System.out.println("Done!!!");
 		} else if ((args.length == 2)&&(args[0].equals("export"))) {
-			MapData mapData =  openMap(args[1]);
-			exportMaps(mapData);
-		    mapData.close();
+			WurmMapUploader uploader = new WurmMapUploader(args[1]);
+			uploader.exportMaps();
+			uploader.close();
 			System.out.println("Done!!!");
 		} else if ((args.length == 1)&&(args[0].equals("help"))) {
 			displayInfo();
@@ -148,8 +161,16 @@ public class WurmMapUploader {
 		
 	}
 	
-	public static void dumpMapData(MapData mapData) throws IOException {
-	    BufferedImage dumpImage = mapData.createMapDump();
+	private void saveChanges() {
+		this.mapData.saveChanges();
+	}
+
+	private void close() {
+		this.mapData.close();
+	}
+
+	public void dumpMapData() throws IOException {
+		BufferedImage dumpImage = this.mapData.createMapDump();
 	    File outputfile = new File("dump_image.png");
 	    ImageIO.write(dumpImage, "png", outputfile);
 
@@ -165,22 +186,34 @@ public class WurmMapUploader {
 	    outputfile = new File("topographic_dump_image.png");
 	    ImageIO.write(dumpImage, "png", outputfile);
 
+	    dumpImage = createRockTopographicDump(mapData, false, (short)100);
+	    outputfile = new File("rock_dump_image.png");
+	    ImageIO.write(dumpImage, "png", outputfile);
+
 	    dumpImage = createCaveDump(mapData);
 	    outputfile = new File("cave_dump_image.png");
 	    ImageIO.write(dumpImage, "png", outputfile);
 
-	    dumpImage = createRockTopographicDump(mapData, false, (short)100);
-	    outputfile = new File("rock_dump_image.png");
-	    ImageIO.write(dumpImage, "png", outputfile);
 	}
 	
-	public static void exportMaps(MapData mapData) throws IOException {
-		BufferedImage mapImage = exportRockMap(mapData);
+	public void exportMaps() throws IOException {
+		
+		BufferedImage mapImage = this.mapData.createMapDump();//I don't understand why, but this function is required for correct identification of tile properties 
+		
+		mapImage = exportRockMap(this.mapData);
 	    File outputfile = new File("exported_rock_map.png");
 	    ImageIO.write(mapImage, "png", outputfile);
 
-		mapImage = exportHeightMap(mapData);
+	    mapImage = exportHeightMap(this.mapData);
 	    outputfile = new File("exported_height_map.png");
+	    ImageIO.write(mapImage, "png", outputfile);
+
+	    mapImage = exportCaveMap(this.mapData);
+	    outputfile = new File("exported_cave_map.png");
+	    ImageIO.write(mapImage, "png", outputfile);
+
+	    mapImage = exportTerrainMap(this.mapData);
+	    outputfile = new File("exported_terrain_map.png");
 	    ImageIO.write(mapImage, "png", outputfile);
 }
 
@@ -200,13 +233,12 @@ public class WurmMapUploader {
 		System.out.println("Generate dump images for Wurm Unlimited map data. EXISTING DUMP FILES WILL BE OVERWRITTEN.");
 		System.out.println("java WurmMapUploader dump <WU map folder>");
 		System.out.println();
-		System.out.println("Export surface height map and rock layer height map as 16 bit grayscale PNG");
+		System.out.println("Export surface height map and rock layer height map as 16 bit grayscale PNG, terrain and cave maps as color PNG");
 		System.out.println("java WurmMapUploader export <WU map folder>");
 		System.out.println();
 		System.out.println("Important note: height map and rock height map files must be 16-bit greatscale PNG, terrain map and cave map files must be 24 or 32 bit color PNG");
 		System.out.println("only 2048x2048 maps can be loaded in the current version");
 		System.out.println("see terrain and cave colors in README file");
-		
 	}
 
 	private static void createBlankMap(String fileName) {
@@ -218,27 +250,26 @@ public class WurmMapUploader {
 		}
 	}
 	
-	private static MapData openMap(String fileName) throws IOException {
+/*	private static MapData openMap(String fileName) throws IOException {
 		WurmAPI api = WurmAPI.open(fileName);
 		MapData data = api.getMapData();
 		return data;
 	}
-
-	private static MapData importMap(MapData mapData, String heightMapFileName, String terrainMapFileName, String caveMapFileName, String rockMapFileName) throws IOException {
-		BufferedImage image = ImageIO.read(new File(heightMapFileName));
+*/
+	private MapData importMap(String heightMapFileName, String terrainMapFileName, String caveMapFileName, String rockMapFileName) throws IOException {
+		BufferedImage heightImage = ImageIO.read(new File(heightMapFileName));
 		BufferedImage terrainImage = ImageIO.read(new File(terrainMapFileName));
 		BufferedImage caveImage = ImageIO.read(new File(caveMapFileName));
 		BufferedImage rockImage = ImageIO.read(new File(rockMapFileName));
 			
 //		System.out.println(image.getColorModel().toString());
-		
 				
-		int imageHeight = image.getHeight();
+		int imageHeight = heightImage.getHeight();
 		if (imageHeight != 2048) {
 			System.err.println("Image height not equal to 2048");
 			System.exit(1);
 		}
-		int imageWidth = image.getWidth();
+		int imageWidth = heightImage.getWidth();
 		if (imageWidth != imageHeight) {
 			System.err.println("Image height not equal 2048");
 			System.exit(1);
@@ -262,73 +293,58 @@ public class WurmMapUploader {
 			System.exit(1);
 		}
 			
-		Raster raster = image.getRaster();
+		Raster heightRaster = heightImage.getRaster();
 		Raster rockRaster = rockImage.getRaster();
 		
 	    for (int x = 0; x < imageWidth; x++)
 	    {
 	        for (int y = 0; y < imageHeight; y++)
 	        {
-	        	int[] pixelColor = new int[2];
+	        	int[] heightPixelColor = new int[2];
+
+	        	heightRaster.getPixel(x, y, heightPixelColor);
+	        	short height = (short) ((heightPixelColor[0] - Short.MAX_VALUE + ELEVATION_SHIFT)/ELEVATION_SCALE);
+	        	if (height > 0) landTilesCount++;
+
 	        	Color color = new Color(terrainImage.getRGB(x,y));
 	        	Tile tileType = decodeColor (color);
 	        	if (tileType == Tile.TILE_ROCK) exposedRockCount++;
-	        	raster.getPixel(x, y, pixelColor);
-	        	short height = (short) ((pixelColor[0] - Short.MAX_VALUE + ELEVATION_SHIFT)/ELEVATION_SCALE);
-	        	if (height > 0) landTilesCount++;
-
-	        	if (TWEAK_HEIGHT) {
-	        		height = tweakHeight (x, y, color, height);
-	        	}
-	        	if (TWEAK_TERRAIN){
-	        		tileType = tweakTerrain (x, y, tileType, height);
-	        	}
 	        	
+	        	//set plants and tile types
 	        	if (tileType.isTree()) {
-    				if (REMOVE_EXCESSIVE_TREES) {
-	        			Random rand = new Random();
-	        			int randomNumber = rand.nextInt(100); 
-	        			if (randomNumber < treesDensity) { //80% of trees filtered out
-	        					if ((!mapData.getSurfaceTile(x-1, y).isTree())&&(!mapData.getSurfaceTile(x, y-1).isTree())){
-	        						treeCount++;
-	        						mapData.setSurfaceTile(x, y, Tile.TILE_GRASS, height);
-	        						mapData.setTree(x, y, decodeTree(color), FoliageAge.YOUNG_THREE, GrassData.GrowthTreeStage.MEDIUM);
-	        					} else {
-	        						mapData.setSurfaceTile(x, y, Tile.TILE_GRASS, height);
-	        					}
-	        			} else {
-	        				mapData.setSurfaceTile(x, y, Tile.TILE_GRASS, height);
-	        			}
-    				} else {
-    					treeCount++;
-    					mapData.setTree(x, y, decodeTree(color), FoliageAge.YOUNG_THREE, GrassData.GrowthTreeStage.MEDIUM);
-    				}
+    				treeCount++;
+    				this.mapData.setTree(x, y, decodeTree(color), getTreeAge(), getGrassGrowthTreeStage());
 	        	} else if (tileType.isBush()){
 	        		bushCount++;
-	        		mapData.setSurfaceTile(x, y, Tile.TILE_GRASS, height);
-	        		mapData.setBush(x, y, decodeBush(color), FoliageAge.YOUNG_THREE, GrassData.GrowthTreeStage.MEDIUM);
+	        		this.mapData.setSurfaceTile(x, y, Tile.TILE_GRASS, height);
+	        		this.mapData.setBush(x, y, decodeBush(color), getBushAge(), getGrassGrowthTreeStage());
+	        	} else if (tileType == Tile.TILE_GRASS) {
+	        		this.mapData.setSurfaceTile(x, y, Tile.TILE_GRASS, height);
+	        		this.mapData.setGrass(x, y, getGrassGrowthStage(), getFlower());
+	        	} else if (tileType == Tile.TILE_KELP) {
+	        		this.mapData.setSurfaceTile(x, y, Tile.TILE_KELP, height);
+	        		this.mapData.setGrass(x, y, getGrassGrowthStage(), null);
+	        	} else if (tileType == Tile.TILE_REED) {
+	        		this.mapData.setSurfaceTile(x, y, Tile.TILE_REED, height);
+	        		this.mapData.setGrass(x, y, getGrassGrowthStage(), null);
 	        	} else {
-	        		mapData.setSurfaceTile(x, y, tileType, height);
+	        		this.mapData.setSurfaceTile(x, y, tileType, height);
 	        	}
-	        	
+
+	        	//set rock layer	        	
 	        	short rockHeight = 0;
-	        	if (IMPORT_ROCK_IMAGE) {
-		        	int[] rockPixelColor = new int[2];
-		        	rockRaster.getPixel(x, y, rockPixelColor);
-		        	rockHeight = (short) ((rockPixelColor[0] - Short.MAX_VALUE + ROCK_HEIGHT_SHIFT)/ROCK_HEIGHT_SCALE);
-	        	} else {
-	        		rockHeight = calculateRockHeight (color, height);
-	        	}
+	        	int[] rockPixelColor = new int[2];
+	        	rockRaster.getPixel(x, y, rockPixelColor);
+		        rockHeight = (short) ((rockPixelColor[0] - Short.MAX_VALUE + ROCK_HEIGHT_SHIFT)/ROCK_HEIGHT_SCALE);
         		mapData.setRockHeight(x, y, rockHeight);
 
+        		//set cave tiles
         		Tile caveTile; 
-	        	if (IMPORT_CAVE_IMAGE) {
-	        		Color caveColor = new Color(caveImage.getRGB(x, y));
-	        		//System.out.println("x " + x + " y " + y + " RGB" + caveColor.getRGB());
-	        		caveTile = decodeCaveColor(caveColor);
-	        	} else {
-	        		caveTile = generateCaveTile(x*imageHeight + y, rockHeight);
-	        	}
+        		Color caveColor = new Color(caveImage.getRGB(x, y));
+        		//System.out.println("x " + x + " y " + y + " RGB" + caveColor.getRGB());
+        		caveTile = decodeCaveColor(caveColor);
+
+        		//set number of resources
 	        	short resourceCount = 51;
         		if (caveTile == Tile.TILE_CAVE_WALL) {
         			mapData.setCaveTile(x, y, generateCaveTile(x*imageHeight + y, rockHeight), resourceCount);
@@ -338,7 +354,6 @@ public class WurmMapUploader {
         			mapData.setCaveTile(x, y, generateCaveTile(x*imageHeight + y, rockHeight), resourceCount);
         		}
 	        }
-	        
 	    }
 	    System.out.println("Total number of land tiles is " + landTilesCount);
 	    System.out.println("Total number of rock tiles is " + exposedRockCount);
@@ -348,6 +363,216 @@ public class WurmMapUploader {
 	    return mapData;
 	}
 	
+	private GrowthTreeStage getGrassGrowthTreeStage() {
+		if (RANDOMIZE_GRASS_GROWTH_STAGE) {
+			int age = rand.nextInt(4);
+			if (age == 0) {
+				return GrowthTreeStage.SHORT;
+			} else if (age == 1) {
+				return GrowthTreeStage.MEDIUM;
+			} else if (age == 2) {
+				return GrowthTreeStage.TALL;
+			} else if (age == 3) {
+				return GrowthTreeStage.LAWN;
+			}
+		} else {
+			return GrowthTreeStage.MEDIUM;
+		}
+		return null;
+	}
+
+	private GrowthStage getGrassGrowthStage() {
+		if (RANDOMIZE_GRASS_GROWTH_STAGE) {
+			int age = rand.nextInt(4);
+			if (age == 0) {
+				return GrowthStage.SHORT;
+			} else if (age == 1) {
+				return GrowthStage.MEDIUM;
+			} else if (age == 2) {
+				return GrowthStage.TALL;
+			} else if (age == 3) {
+				return GrowthStage.WILD;
+			}
+
+		} else {
+			return GrowthStage.MEDIUM;
+		}
+		return null;
+	}
+
+	private FlowerType getFlower() {
+		int flower = rand.nextInt(1501);
+		if (flower <= flowersDensity) {
+			return FlowerType.FLOWER_1;
+		} else if (flower <= 2*flowersDensity) {
+			return FlowerType.FLOWER_2;
+		} else if (flower <= 3*flowersDensity) {
+			return FlowerType.FLOWER_3;
+		} else if (flower <= 4*flowersDensity) {
+			return FlowerType.FLOWER_4;
+		} else if (flower <= 5*flowersDensity) {
+			return FlowerType.FLOWER_5;
+		} else if (flower <= 6*flowersDensity) {
+			return FlowerType.FLOWER_6;
+		} else if (flower <= 7*flowersDensity) {
+			return FlowerType.FLOWER_7;
+		} else if (flower <= 8*flowersDensity) {
+			return FlowerType.FLOWER_8;
+		} else if (flower <= 9*flowersDensity) {
+			return FlowerType.FLOWER_9;
+		} else if (flower <= 10*flowersDensity) {
+			return FlowerType.FLOWER_10;
+		} else if (flower <= 11*flowersDensity) {
+			return FlowerType.FLOWER_11;
+		} else if (flower <= 12*flowersDensity) {
+			return FlowerType.FLOWER_12;
+		} else if (flower <= 13*flowersDensity) {
+			return FlowerType.FLOWER_13;
+		} else if (flower <= 14*flowersDensity) {
+			return FlowerType.FLOWER_14;
+		} else if (flower <= 15*flowersDensity) {
+			return FlowerType.FLOWER_15;
+		} else {
+			return FlowerType.NONE;
+		}
+	}
+
+	private FoliageAge getBushAge() {
+		if (RANDOMIZE_BUSH_AGE) {
+			return getFoliageAge();
+		} else {
+			return FoliageAge.YOUNG_THREE;
+		}
+	}
+
+	private FoliageAge getTreeAge() {
+		if (RANDOMIZE_TREE_AGE) {
+			return getFoliageAge();
+		} else {
+			return FoliageAge.YOUNG_THREE;
+		}
+	}
+
+	private FoliageAge getFoliageAge() {
+			int age = rand.nextInt(16);
+			if (age == 0) {
+				return FoliageAge.YOUNG_ONE; 
+			} else if (age == 1) {
+				return FoliageAge.YOUNG_TWO;
+			} else if (age == 2) {
+				return FoliageAge.YOUNG_THREE;
+			} else if (age == 3) {
+				return FoliageAge.YOUNG_FOUR;
+			} else if (age == 4) {
+				return FoliageAge.MATURE_ONE;
+			} else if (age == 5) {
+				return FoliageAge.MATURE_TWO;
+			} else if (age == 6) {
+				return FoliageAge.MATURE_THREE;
+			} else if (age == 7) {
+				return FoliageAge.MATURE_SPROUTING;
+			} else if (age == 8) {
+				return FoliageAge.OLD_ONE;
+			} else if (age == 9) {
+				return FoliageAge.OLD_ONE_SPROUTING;
+			} else if (age == 10) {
+				return FoliageAge.OLD_TWO;
+			} else if (age == 11) {
+				return FoliageAge.OLD_TWO_SPROUTING;
+			} else if (age == 12) {
+				return FoliageAge.VERY_OLD;
+			} else if (age == 13) {
+				return FoliageAge.VERY_OLD_SPROUTING;
+			} else if (age == 14) {
+				return FoliageAge.OVERAGED;
+			} else {
+				return FoliageAge.SHRIVELLED;
+			}
+	}
+
+	private static Color encodeTerrainTile(Tile tile) {
+		Color color = new Color (-1);
+		if (tile == Tile.TILE_SAND) {
+			color = new Color(SAND_COLOR);
+		} else if (tile == Tile.TILE_LAVA) {
+			color = new Color(LAVA_COLOR);
+		} else if (tile == Tile.TILE_CLIFF) {
+			color = new Color(CLIFF_COLOR);
+		} else if (tile == Tile.TILE_TUNDRA) {
+			color = new Color(TUNDRA_COLOR);
+		} else if (tile == Tile.TILE_STEPPE) {
+			color = new Color(STEPPE_COLOR);
+		} else if (tile == Tile.TILE_ROCK) {
+			color = new Color(ROCK_COLOR);
+		} else if (tile == Tile.TILE_CLAY) {
+			color = new Color(CLAY_COLOR);
+		} else if (tile == Tile.TILE_MOSS) {
+			color = new Color(MOSS_COLOR);
+		} else if (tile == Tile.TILE_DIRT) {
+			color = new Color(DIRT_COLOR);
+		} else if (tile == Tile.TILE_MYCELIUM) {
+			color = new Color(MYCELIUM_COLOR);
+		} else if (tile == Tile.TILE_REED) {
+			color = new Color(REED_COLOR);
+		} else if (tile == Tile.TILE_KELP) {
+			color = new Color(KELP_COLOR);
+		} else if (tile == Tile.TILE_GRASS) {
+			color = new Color(GRASS_COLOR);
+		} else if (tile == Tile.TILE_PEAT) {
+			color = new Color(PEAT_COLOR);
+		} else if (tile == Tile.TILE_MARSH) {
+			color = new Color(MARSH_COLOR);
+		} else if (tile == Tile.TILE_TAR) {
+			color = new Color(TAR_COLOR);
+		} else if (tile == Tile.TILE_SNOW) {
+			color = new Color(SNOW_COLOR);
+		} else if (tile == Tile.TILE_BUSH_THORN) {
+			color = new Color(THORN_COLOR);
+		} else if (tile == Tile.TILE_BUSH_ROSE) {
+			color = new Color(ROSE_COLOR);
+		} else if (tile == Tile.TILE_BUSH_OLEANDER) {
+			color = new Color(OLEANDER_COLOR);
+		} else if (tile == Tile.TILE_BUSH_LAVENDER) {
+			color = new Color(LAVENDER_COLOR);
+		} else if (tile == Tile.TILE_BUSH_GRAPE) {
+			color = new Color(GRAPE_COLOR);
+		} else if (tile == Tile.TILE_BUSH_CAMELLIA) {
+			color = new Color(CAMELLIA_COLOR);
+		} else if (tile == Tile.TILE_TREE_WILLOW) {
+			color = new Color(WILLOW_COLOR);
+		} else if (tile == Tile.TILE_TREE_WALNUT) {
+			color = new Color(WALNUT_COLOR);
+		} else if (tile == Tile.TILE_TREE_PINE) {
+			color = new Color(PINE_COLOR);
+		} else if (tile == Tile.TILE_TREE_OLIVE) {
+			color = new Color(OLIVE_COLOR);
+		} else if (tile == Tile.TILE_TREE_OAK) {
+			color = new Color(OAK_COLOR);
+		} else if (tile == Tile.TILE_TREE_MAPLE) {
+			color = new Color(MAPLE_COLOR);
+		} else if (tile == Tile.TILE_TREE_LINDEN) {
+			color = new Color(LINDEN_COLOR);
+		} else if (tile == Tile.TILE_TREE_LEMON) {
+			color = new Color(LEMON_COLOR);
+		} else if (tile == Tile.TILE_TREE_FIR) {
+			color = new Color(FIR_COLOR);
+		} else if (tile == Tile.TILE_TREE_CHESTNUT) {
+			color = new Color(CHESTNUT_COLOR);
+		} else if (tile == Tile.TILE_TREE_CHERRY) {
+			color = new Color(CHERRY_COLOR);
+		} else if (tile == Tile.TILE_TREE_CEDAR) {
+			color = new Color(CEDAR_COLOR);
+		} else if (tile == Tile.TILE_TREE_BIRCH) {
+			color = new Color(BIRCH_COLOR);
+		} else if (tile == Tile.TILE_TREE_APPLE) {
+			color = new Color(APPLE_COLOR);
+		} else {
+			System.err.println("Unsupported type of terrain tile: " + tile.tilename + ". Dirt will be used instead.");
+			color = new Color(DIRT_COLOR);
+		}
+		return color;
+	}
+
 	private static Color encodeCaveTile(Tile tile) {
 		Color color = new Color (-1);
 		if (tile == Tile.TILE_CAVE_WALL) {
@@ -463,23 +688,23 @@ public class WurmMapUploader {
 	}
 
 	private static BushType decodeBush(Color color) {
-	if (color.getRGB() == CAMELLIA_COLOR) {
-		return BushType.CAMELLIA;
-	} else if (color.getRGB() == GRAPE_COLOR) {
-		return BushType.GRAPE;
-	} else if (color.getRGB() == LAVENDER_COLOR) {
-		return BushType.LAVENDER;
-	} else if (color.getRGB() == OLEANDER_COLOR) {
-		return BushType.OLEANDER;
-	} else if (color.getRGB() == ROSE_COLOR) {
-		return BushType.ROSE;
-	} else if (color.getRGB() == THORN_COLOR) {
-		return BushType.THORN;
-	} else {
-		System.err.println("Unknown RGB color for bush " + color.getRed() + ", " + color.getGreen() + ", " + color.getBlue());
-		System.exit(1);
-	}
-	return null;
+		if (color.getRGB() == CAMELLIA_COLOR) {
+			return BushType.CAMELLIA;
+		} else if (color.getRGB() == GRAPE_COLOR) {
+			return BushType.GRAPE;
+		} else if (color.getRGB() == LAVENDER_COLOR) {
+			return BushType.LAVENDER;
+		} else if (color.getRGB() == OLEANDER_COLOR) {
+			return BushType.OLEANDER;
+		} else if (color.getRGB() == ROSE_COLOR) {
+			return BushType.ROSE;
+		} else if (color.getRGB() == THORN_COLOR) {
+			return BushType.THORN;
+		} else {
+			System.err.println("Unknown RGB color for bush " + color.getRed() + ", " + color.getGreen() + ", " + color.getBlue());
+			System.exit(1);
+		}
+		return null;
 	}
 	
 	private static TreeType decodeTree(Color color) {
@@ -600,29 +825,7 @@ public class WurmMapUploader {
 		return null;
 	}
 	
-	private static short calculateRockHeight(Color color, short height) {
-		short returnVal = Short.MIN_VALUE;
-		if (color.getRGB() == ROCK_COLOR){
-			returnVal = height; //expose rock layer
-		} else if (color.getRGB() == CLIFF_COLOR) {
-			returnVal = (short) (height-1); //cliffs have rock right under surface
-		} else if (height < -100) {
-			returnVal = (short) (height - 30); //deep water has a thin layer of dirt over rock
-		} else if (color.getRGB() == MARSH_COLOR) {
-			returnVal = (short) (height - 25); //marsh 
-		} else if (height < 0) {
-			returnVal = (short) (height *1.1 -20);//shallow water: some dirt for dredging
-		} else if (height < 1000) {
-			returnVal = (short) (height*0.9 - 20); //lowlands have thick dirt layer, from 20 dirt at water level to 120 dirt at 999  
-		} else if (height < 3000) {
-			returnVal = (short) (height*0.9 + 80); //highlands have variable dirt layer, from 20 dirt at 1000 to 220 dirt at 3000.  
-		} else {
-			returnVal = (short) (height - 20); // peaks over 3000 height have thin dirt layer 
-		}
-		return returnVal;
-	}
-
-	public static BufferedImage createCaveDump(MapData mapData) {
+	private static BufferedImage createCaveDump(MapData mapData) {
         int lWidth = 16384;
         if (lWidth > mapData.getWidth())
             lWidth = mapData.getWidth();
@@ -667,7 +870,7 @@ public class WurmMapUploader {
         return bi2;
 	}
 
-    public static BufferedImage createRockTopographicDump(MapData mapData, boolean showWater, short interval) {
+	private static BufferedImage createRockTopographicDump(MapData mapData, boolean showWater, short interval) {
         int lWidth = 16384;
         if (lWidth > mapData.getWidth())
             lWidth = mapData.getWidth();
@@ -733,7 +936,6 @@ public class WurmMapUploader {
         return false;
     }
 
-    
     public static BufferedImage exportRockMap(MapData mapData) {
     	
         int lWidth = 16384;
@@ -799,7 +1001,6 @@ public class WurmMapUploader {
         if (yo > 0)
             yo = random.nextInt(yo);
 
-
         final short[] pixels = new short[lWidth * lWidth];
         
         for (int x = 0; x < lWidth; x++) {
@@ -828,44 +1029,95 @@ public class WurmMapUploader {
         return new BufferedImage(colorModel, raster, false, null);
     }
 
-    private static short tweakHeight(int x, int y, Color color, short height) {
-		if (height < -100) {
-			height = (short)(height/10 -100); //no need to have very deep water
-		}
-		if ((color.getRGB() == MARSH_COLOR)&&(height<-20)) {
-			height = -20; // get rid of deep water swamps
-		} else if ((color.getRGB() == CLAY_COLOR)&&(height<1)) {
-			height = 1; // rise clay
-		}
-		return height;
-	}
-	private static Tile tweakTerrain(int x, int y, Tile tileType, short height) {
-    	if (height < 0) {
-			if ((x > 1000)&&(x<1400)&&(y>1000)&&(y<1490)) {
-				if ((height < -1)&&(height > -9)) {
-					return Tile.TILE_REED;
-				} else {
-					return Tile.TILE_MARSH;
-				}
-			} else {
-    			if (height < -90) {
-    				return Tile.TILE_DIRT;
-    			} else if (height == -15) {
-    				return Tile.TILE_KELP;
-    			} else {
-    				return Tile.TILE_SAND;
-    			}
-   			}
-    	} else if (height < 30) {
-    		return Tile.TILE_SAND;
-    	} else if (height < 2000) {
-    		return Tile.TILE_GRASS;
-		} else if (height < 3000) {
-			return Tile.TILE_STEPPE;
-		} else {
-			return Tile.TILE_ROCK;
-		}
+    private static BufferedImage exportTerrainMap(MapData mapData) {
+        int lWidth = 16384;
+        if (lWidth > mapData.getWidth())
+            lWidth = mapData.getWidth();
+        int yo = mapData.getWidth() - lWidth;
+        if (yo < 0)
+            yo = 0;
+        int xo = mapData.getWidth() - lWidth;
+        if (xo < 0)
+            xo = 0;
+
+        final Random random = new Random();
+        if (xo > 0)
+            xo = random.nextInt(xo);
+        if (yo > 0)
+            yo = random.nextInt(yo);
+
+        final BufferedImage bi2 = new BufferedImage(lWidth, lWidth, BufferedImage.TYPE_INT_RGB);
+        final float[] data = new float[lWidth * lWidth * 3];
+        
+        for (int x = 0; x < lWidth; x++) {
+            for (int y = lWidth - 1; y >= 0; y--) {
+                final Tile tile = mapData.getSurfaceTile(x + xo, y + yo);
+                
+
+                final Color color;
+                if (tile != null) {
+               		color = encodeTerrainTile(tile);
+                }
+                else {
+                	System.out.println("Terrain on tile " + (x + xo) + ", " + (y + yo) + " is not set. Dirt will be used on the terrain map.");
+                    color = new Color (DIRT_COLOR);
+                }
+                int r = color.getRed();
+                int g = color.getGreen();
+                int b = color.getBlue();
+                data[(x + y * lWidth) * 3 + 0] = r;
+                data[(x + y * lWidth) * 3 + 1] = g;
+                data[(x + y * lWidth) * 3 + 2] = b;
+            }
+        }
+
+        bi2.getRaster().setPixels(0, 0, lWidth, lWidth, data);
+        return bi2;
 	}
 
+    private static BufferedImage exportCaveMap(MapData mapData) {
+        int lWidth = 16384;
+        if (lWidth > mapData.getWidth())
+            lWidth = mapData.getWidth();
+        int yo = mapData.getWidth() - lWidth;
+        if (yo < 0)
+            yo = 0;
+        int xo = mapData.getWidth() - lWidth;
+        if (xo < 0)
+            xo = 0;
+
+        final Random random = new Random();
+        if (xo > 0)
+            xo = random.nextInt(xo);
+        if (yo > 0)
+            yo = random.nextInt(yo);
+
+        final BufferedImage bi2 = new BufferedImage(lWidth, lWidth, BufferedImage.TYPE_INT_RGB);
+        final float[] data = new float[lWidth * lWidth * 3];
+        
+        for (int x = 0; x < lWidth; x++) {
+            for (int y = lWidth - 1; y >= 0; y--) {
+                final Tile tile = mapData.getCaveTile(x + xo, y + yo);
+
+                final Color color;
+                if (tile != null) {
+                    color = encodeCaveTile(tile);
+                }
+                else {
+                	System.out.println("Cave on tile " + (x + xo) + ", " + (y + yo) + " is not set. The tile will have white color on cave dump image");
+                    color = new Color (255,255,255);
+                }
+                int r = color.getRed();
+                int g = color.getGreen();
+                int b = color.getBlue();
+                data[(x + y * lWidth) * 3 + 0] = r;
+                data[(x + y * lWidth) * 3 + 1] = g;
+                data[(x + y * lWidth) * 3 + 2] = b;
+            }
+        }
+
+        bi2.getRaster().setPixels(0, 0, lWidth, lWidth, data);
+        return bi2;
+	}
 
 }

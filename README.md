@@ -39,7 +39,7 @@ Generates dump images for Wurm Unlimited map data. EXISTING DUMP FILES WILL BE O
         
 java WurmMapUploader export [WU map folder]
 
-Generates height maps surface and rock layer as 16 bit grayscale PNG files. 
+Generates height maps surface and rock layer as 16 bit grayscale PNG files. EXISTING EXPORTED FILES WILL BE OVERWRITTEN.
 
 java WurmMapUploader help
 
@@ -47,53 +47,19 @@ Displays help message
 
 #Settings in source code
 
-IMPORT_CAVE_IMAGE: set to false if you have no cave map image and need to generate it. 
-Set this variable to false to get a cave map with dense and uniform distribution of ore veins under land tiles.
+RANDOMIZE_TREE_AGE: generates trees with random age. If set to false, all trees will have age YOUNG_THREE
 
-IMPORT_ROCK_IMAGE: set to false if you have no rock height map image. 
-Set this variable to false to generate rock layer as described below. 
+RANDOMIZE_BUSH_AGE: generates bushes with random age. If set to false, all bushes will have age YOUNG_THREE
 
+RANDOMIZE_GRASS_GROWTH_STAGE: generates grass tiles with random growth stage. If set to false, all grass tiles will have growth stage MEDIUM
+
+flowersDensity: sets % of grass tiles with flowers 
 
 ELEVATION_SCALE: scales down height map if it has too tall mountains. You may need to change it, depending on output of your terrain generator.
 
 ELEVATION_SHIFT: shifts up or down the whole terrain, if it is placed too deep under water or too high. You may need to change it, depending on output of your terrain generator.
 
-
-Note: even if you set it false, you still must provide any color PNG file of proper size as a cave map. 
-
-TWEAK_HEIGHT: if set to true, maximum water depth is set to -25 for marsh and -100 for other terrain. Underwater clay tiles will be elevated to +1 height.
-
-REMOVE_EXCESSIVE_TREES: if set to true, some trees will be eliminated from the terrain map and changed to grass. This option is useful if you fill some areas with solid color of a tree type and want to make trees a little more  scattered. Set % of remaining trees in treesDensity variable.
-
-TWEAK_TERRAIN: some tweaks that were used for initial creation of Treasure Island terrain (see test image files). In 99% of cases, this option should not be set true.
-
-#Ages of trees and bushes
-
-All trees and bushes have age YOUNG_THREE. Grass on tree and bush tiles has growth stage MEDIUM.
-
-#Depth of dirt layer
-
-Height of rock layer is calculated from height of tile and type of terrain. 
-
-On rock tiles, rock layer height is equal to land surface height.
-
-On cliff tiles, rock layer is 1 unit lower than height.
-
-On marsh tiles, rock layer is 25 units lower than height.
-
-On other terrain tiles, depth of a dirt layer depends on elevation (distance from water level):
-
-- deep water tiles (lower than -100 from sea level) have 30 dirts over rock.
-
-- underwater tiles from -100 to -1 deep have rock layer at (surface depth)*1.1 - 20 
-
-- tiles on land with elevation between 0 and 999 have rock layer at elevation*0.9 - 20, 
-thus depth of dirt layer ranges from 20 at elevation 0 to 120 at elevation 999
-
-- tiles with elevation between 1000 and 2999 have rock layer at elevation*0.9 + 80,
-thus depth of dirt layer ranges from 20 at elevation 1000 to 220 at elevation 2999
-
-- tiles with elevation 3000 and more have 20 dirt over rock layer 
+ROCK_HEIGHT_SHIFT and ROCK_HEIGHT_SCALE affect the rock layer in the same way
 
 #Dump files
 
@@ -119,18 +85,30 @@ cave_dump_image.png
 
 flat map dump with cave types in different colors
 
+#Test example
+
+1. Create a new blank map in map-test directory:
+
+java WurmMapUploader create map-test
+
+2. Load test data and create dump files:
+
+java WurmMapUploader load ".\map-test" "test-data\heightmap.png" "test-data\terrain.png" "test-data\caves.png" "test-data\rock.png"
+
+Note: if you start WurmMapUploader.java from other directory, change path to test-data directory.
+
 #Colors for terrain map
 
 Some terrain types are not supported in the current version of the uploader (for example, roads)
 
 |Terrain type |Name|Red|Green|Blue|
 |---|---|---|---|---|
-|TILE_BUSH_CAMELLIA|Camellia bush|41|58|12|
-|TILE_BUSH_GRAPE|Grape bush|41|58|22|
-|TILE_BUSH_LAVENDER|Lavender bush|41|58|32|
-|TILE_BUSH_OLEANDER|Oleander bush|41|58|42|
-|TILE_BUSH_ROSE|Rose bush|41|58|52|
-|TILE_BUSH_THORN|Thorn bush|41|58|62|
+|TILE_BUSH_CAMELLIA|Camellia bush|249|249|159|
+|TILE_BUSH_GRAPE|Grape bush|153|62|155|
+|TILE_BUSH_LAVENDER|Lavender bush|214|66|255|
+|TILE_BUSH_OLEANDER|Oleander bush|249|197|238|
+|TILE_BUSH_ROSE|Rose bush|255|43|50|
+|TILE_BUSH_THORN|Thorn bush|136|50|44|
 |TILE_CLAY|Clay|113|124|118|
 |TILE_CLIFF|Cliff|155|151|148|
 |TILE_DIRT|Dirt|75|63|47|
@@ -147,20 +125,20 @@ Some terrain types are not supported in the current version of the uploader (for
 |TILE_SNOW|Snow|255|255|255|
 |TILE_STEPPE|Steppe|114|117|67|
 |TILE_TAR|Tar|18|21|40|
-|TILE_TREE_APPLE|Apple tree|41|58|92|
-|TILE_TREE_BIRCH|Birch tree|41|58|102|
-|TILE_TREE_CEDAR|Cedar tree|41|58|112|
-|TILE_TREE_CHERRY|Cherry tree|41|58|122|
-|TILE_TREE_CHESTNUT|Chestnut tree|41|58|132|
-|TILE_TREE_FIR|Fir tree|41|58|142|
-|TILE_TREE_LEMON|Lemon tree|41|58|152|
-|TILE_TREE_LINDEN|Linden tree|41|58|162|
-|TILE_TREE_MAPLE|Maple tree|41|58|172|
-|TILE_TREE_OAK|Oak tree|41|58|182|
-|TILE_TREE_OLIVE|Olive tree|41|58|192|
-|TILE_TREE_PINE|Pine tree|41|58|202|
-|TILE_TREE_WALNUT|Walnut tree|41|58|212|
-|TILE_TREE_WILLOW|Willow tree|41|58|222|
+|TILE_TREE_APPLE|Apple tree|255|190|0|
+|TILE_TREE_BIRCH|Birch tree|247|229|64|
+|TILE_TREE_CEDAR|Cedar tree|78|221|46|
+|TILE_TREE_CHERRY|Cherry tree|226|34|0|
+|TILE_TREE_CHESTNUT|Chestnut tree|0|211|98|
+|TILE_TREE_FIR|Fir tree|90|206|146|
+|TILE_TREE_LEMON|Lemon tree|255|233|94|
+|TILE_TREE_LINDEN|Linden tree|171|193|89|
+|TILE_TREE_MAPLE|Maple tree|183|60|0|
+|TILE_TREE_OAK|Oak tree|123|198|1|
+|TILE_TREE_OLIVE|Olive tree|144|160|110|
+|TILE_TREE_PINE|Pine tree|186|75|24|
+|TILE_TREE_WALNUT|Walnut tree|128|219|17|
+|TILE_TREE_WILLOW|Willow tree|121|193|108|
 |TILE_TUNDRA|Tundra|118|135|109|
 
 #Colors for cave map
