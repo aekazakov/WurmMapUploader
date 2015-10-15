@@ -134,7 +134,7 @@ Some terrain types are not supported in the current version of the uploader (for
 |TILE_GRASS with FlowerType.FLOWER_13|Grass|249|249|234|
 |TILE_GRASS with FlowerType.FLOWER_14|Grass|249|249|239|
 |TILE_GRASS with FlowerType.FLOWER_15|Grass|249|249|244|
-|TILE_KELP|Kelp|54|101|23|
+|TILE_KELP|Kelp|99|181|41|
 |TILE_LAVA|Lava|215|51|30|
 |TILE_MARSH|Marsh|43|101|72|
 |TILE_MOSS|Moss|106|142|56|

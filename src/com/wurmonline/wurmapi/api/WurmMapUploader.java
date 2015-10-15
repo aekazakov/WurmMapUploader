@@ -63,7 +63,7 @@ public class WurmMapUploader {
 	public static final int DIRT_COLOR = -11845841;
 	public static final int MYCELIUM_COLOR = -12123597;
 	public static final int REED_COLOR = -13212353;
-	public static final int KELP_COLOR = -13212393;
+	public static final int KELP_COLOR = -10242775;
 	public static final int GRASS_COLOR = -13212413;
 	public static final int PEAT_COLOR = -13228256;
 	public static final int MARSH_COLOR = -13933240;
