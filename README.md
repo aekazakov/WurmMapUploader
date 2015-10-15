@@ -7,7 +7,7 @@ Requires WurmModServerApi (https://github.com/codeclubab/WurmModServerApi)
 
 1. Copy WurmMapUploader.java file to WurmModServerApi source folder where WurmAPI.java is stored.
 
-2. Optional: change settings in the WurmMapUploader.java source file (ELEVATION_SCALE, ELEVATION_SHIFT, IMPORT_CAVE_IMAGE, TWEAK_HEIGHT, REMOVE_EXCESSIVE_TREES). See below.
+2. Optional: change settings in the WurmMapUploader.java source file (see below).
 
 3. Compile with javac or run in IDE.
 
@@ -17,13 +17,13 @@ Surface and rock layer height maps must be in 16 bit greyscale PNG format.
 
 Terrain and cave maps must be in 24 or 32 bit color PNG format.
 
-Only 2048x2048 images can be uploaded in the current version
+Only 1024x1024, 2048x2048 or 4096x4096 images can be uploaded
 
 #Available commands
 
-java WurmMapUploader create [map folder]
+java WurmMapUploader create [map folder] [1024|2048|4096]
 
-Creates blank 2048x2084 Wurm Unlimited map in the folder specified. Other map sizes are not supported in the current version.
+Creates blank Wurm Unlimited map in the folder specified. Map sizes may be 1024, 2048 or 4096. Larger map sizes are not supported.
 
 java WurmMapUploader preview [WU map folder] [height map image] [terrain map image] [cave map image] [rock height map image]
 
@@ -41,6 +41,8 @@ java WurmMapUploader export [WU map folder]
 
 Generates height maps surface and rock layer as 16 bit grayscale PNG files. EXISTING EXPORTED FILES WILL BE OVERWRITTEN.
 
+Important note: information about flower types is not exported. All grass tiles are exported as FlowerType.NONE.
+
 java WurmMapUploader help
 
 Displays help message
@@ -52,6 +54,10 @@ RANDOMIZE_TREE_AGE: generates trees with random age. If set to false, all trees 
 RANDOMIZE_BUSH_AGE: generates bushes with random age. If set to false, all bushes will have age YOUNG_THREE
 
 RANDOMIZE_GRASS_GROWTH_STAGE: generates grass tiles with random growth stage. If set to false, all grass tiles will have growth stage MEDIUM
+
+RANDOMIZE_FLOWER_TYPES: if true, random flower types will be set on grass tiles. If set to false, flower types will be set according to color codes in terrain map.
+
+Flower types data may not be exported and not shown on dumps. DO NOT OVERWRITE your terrain map with flower types data, it cannot be recovered from the exported terrain map.
 
 flowersDensity: sets % of grass tiles with flowers 
 
@@ -112,7 +118,22 @@ Some terrain types are not supported in the current version of the uploader (for
 |TILE_CLAY|Clay|113|124|118|
 |TILE_CLIFF|Cliff|155|151|148|
 |TILE_DIRT|Dirt|75|63|47|
-|TILE_GRASS|Grass|54|101|3|
+|TILE_GRASS with FlowerType.NONE|Grass|249|249|169|
+|TILE_GRASS with FlowerType.FLOWER_1|Grass|249|249|174|
+|TILE_GRASS with FlowerType.FLOWER_2|Grass|249|249|179|
+|TILE_GRASS with FlowerType.FLOWER_3|Grass|249|249|184|
+|TILE_GRASS with FlowerType.FLOWER_4|Grass|249|249|189|
+|TILE_GRASS with FlowerType.FLOWER_5|Grass|249|249|194|
+|TILE_GRASS with FlowerType.FLOWER_6|Grass|249|249|199|
+|TILE_GRASS with FlowerType.FLOWER_7|Grass|249|249|204|
+|TILE_GRASS with FlowerType.FLOWER_8|Grass|249|249|209|
+|TILE_GRASS with FlowerType.FLOWER_9|Grass|249|249|214|
+|TILE_GRASS with FlowerType.FLOWER_10|Grass|249|249|219|
+|TILE_GRASS with FlowerType.FLOWER_11|Grass|249|249|224|
+|TILE_GRASS with FlowerType.FLOWER_12|Grass|249|249|229|
+|TILE_GRASS with FlowerType.FLOWER_13|Grass|249|249|234|
+|TILE_GRASS with FlowerType.FLOWER_14|Grass|249|249|239|
+|TILE_GRASS with FlowerType.FLOWER_15|Grass|249|249|244|
 |TILE_KELP|Kelp|54|101|23|
 |TILE_LAVA|Lava|215|51|30|
 |TILE_MARSH|Marsh|43|101|72|
