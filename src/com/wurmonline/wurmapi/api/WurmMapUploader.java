@@ -363,6 +363,7 @@ public class WurmMapUploader {
 				// set plants and tile types
 				if (tileType.isTree()) {
 					treeCount++;
+					this.mapData.setSurfaceTile(x, y, Tile.TILE_GRASS, height);
 					this.mapData.setTree(x, y, decodeTree(color), getTreeAge(),
 							getGrassGrowthTreeStage());
 				} else if (tileType.isBush()) {
