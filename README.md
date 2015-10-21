@@ -39,7 +39,7 @@ Generates dump images for Wurm Unlimited map data. EXISTING DUMP FILES WILL BE O
         
 java WurmMapUploader export [WU map folder]
 
-Generates height maps surface and rock layer as 16 bit grayscale PNG files. EXISTING EXPORTED FILES WILL BE OVERWRITTEN.
+Generates height maps of surface and rock layer as 16 bit grayscale PNG files. Generates terrain map and cave map as color PNG files. EXISTING EXPORTED FILES WILL BE OVERWRITTEN.
 
 Important note: information about flower types is not exported. All grass tiles are exported as FlowerType.NONE.
 
@@ -89,7 +89,7 @@ flat map dump with all terrain types in different colors and with contour lines.
 
 cave_dump_image.png
 
-flat map dump with cave types in different colors
+flat map dump with cave types in different colors with water added
 
 #Test example
 
@@ -105,7 +105,7 @@ Note: if you start WurmMapUploader.java from other directory, change path to tes
 
 #Colors for terrain map
 
-Some terrain types are not supported in the current version of the uploader (for example, roads)
+Some terrain types are not supported by the uploader (for example, roads)
 
 |Terrain type |Name|Red|Green|Blue|
 |---|---|---|---|---|
@@ -183,12 +183,3 @@ WurmModServerApi only allows solid cave walls, so some cave tiles cannot be impo
 |TILE_CAVE_WALL_SLATE|Slate wall|30|30|30|
 |TILE_CAVE_WALL_REINFORCED|Reinforced cave wall|64|64|64|
 
-#Colors that appear in cave dump image but can not be used in cave map image
-
-|Tile type|Name|Red|Green|Blue|
-|---|---|---|---|---|
-|TILE_CAVE|Cave|255|255|255|
-|TILE_CAVE_EXIT|Cave|0|0|0|
-|TILE_CAVE_FLOOR_REINFORCED|Reinforced cave|185|185|185|
-||Non-cave tile|255|127|137|
-||Unknown type of cave tile|255|0|0|

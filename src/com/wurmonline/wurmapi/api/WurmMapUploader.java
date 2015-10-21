@@ -213,7 +213,7 @@ public class WurmMapUploader {
 		outputfile = new File("rock_dump_image.png");
 		ImageIO.write(dumpImage, "png", outputfile);
 
-		dumpImage = createCaveDump(mapData);
+		dumpImage = mapData.createCaveDump(true);
 		outputfile = new File("cave_dump_image.png");
 		ImageIO.write(dumpImage, "png", outputfile);
 
@@ -951,6 +951,7 @@ public class WurmMapUploader {
 		return null;
 	}
 
+/*
 	private static BufferedImage createCaveDump(MapData mapData) {
 		int lWidth = 16384;
 		if (lWidth > mapData.getWidth())
@@ -1000,7 +1001,8 @@ public class WurmMapUploader {
 		bi2.getRaster().setPixels(0, 0, lWidth, lWidth, data);
 		return bi2;
 	}
-
+*/
+	
 	private static BufferedImage createRockTopographicDump(MapData mapData,
 			boolean showWater, short interval) {
 		int lWidth = 16384;
